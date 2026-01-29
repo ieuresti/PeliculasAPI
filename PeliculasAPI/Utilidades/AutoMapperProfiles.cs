@@ -14,6 +14,7 @@ namespace PeliculasAPI.Utilidades
         private void ConfigurarMapeoGeneros()
         {
             CreateMap<GeneroCreacionDTO, Genero>();
+            CreateMap<Genero, GeneroDTO>();
         }
     }
 }
