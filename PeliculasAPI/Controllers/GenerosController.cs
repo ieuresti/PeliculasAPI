@@ -38,11 +38,18 @@ namespace PeliculasAPI.Controllers
                 .ToListAsync();
         }
 
-        [HttpGet("{id}", Name = "ObtenerGeneroPorId")]
+        [HttpGet("{id:int}", Name = "ObtenerGeneroPorId")]
         [OutputCache(Tags = [cacheTag])]
         public async Task<ActionResult<GeneroDTO>> Get(int id) 
         {
-            throw new NotImplementedException();
+            var genero = await context.Generos
+                .ProjectTo<GeneroDTO>(mapper.ConfigurationProvider)
+                .FirstOrDefaultAsync(g => g.Id == id);
+            if (genero is null)
+            {
+                return NotFound();
+            }
+            return genero;
         }
 
         [HttpPost]
@@ -51,19 +58,41 @@ namespace PeliculasAPI.Controllers
             var genero = mapper.Map<Genero>(generoCreacionDTO);
             context.Add(genero);
             await context.SaveChangesAsync();
+            await outputCacheStore.EvictByTagAsync(cacheTag, default); // Limpiar cache al crear un genero
             return CreatedAtRoute("ObtenerGeneroPorId", new {id = genero.Id}, genero);
         }
 
-        [HttpPut]
-        public void Put()
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> Put(int id, [FromBody] GeneroCreacionDTO generoCreacionDTO)
         {
-            throw new NotImplementedException();
+            var generoExiste = await context.Generos.AnyAsync(g => g.Id == id);
+            if (!generoExiste)
+            {
+                return NotFound();
+            }
+
+            var genero = mapper.Map<Genero>(generoCreacionDTO);
+            genero.Id = id;
+
+            context.Update(genero);
+            await context.SaveChangesAsync();
+            await outputCacheStore.EvictByTagAsync(cacheTag, default); // Limpiar cache al actualizar un genero
+            return NoContent(); // Todo esta ok, no hay que retornar ningun tipo de contenido
         }
 
-        [HttpDelete]
-        public void Delete()
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> Delete(int id)
         {
-            throw new NotImplementedException();
+            // Todos los registros que cumplan con la condicion del Where seran borrados
+            var registrosBorrados = await context.Generos.Where(g => g.Id == id).ExecuteDeleteAsync();
+            if (registrosBorrados == 0)
+            {
+                // Si es 0 quiere decir que no existe un registro con dicho id
+                return NotFound();
+            }
+
+            await outputCacheStore.EvictByTagAsync(cacheTag, default); // Limpiar cache al borrar un genero
+            return NoContent();
         }
     }
 }
