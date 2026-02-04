@@ -1,6 +1,10 @@
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using NetTopologySuite;
+using NetTopologySuite.Geometries;
 using PeliculasAPI;
 using PeliculasAPI.Servicios;
+using PeliculasAPI.Utilidades;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,10 +17,19 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Configuracion AutoMapper
-builder.Services.AddAutoMapper(typeof(Program));
+builder.Services.AddSingleton(proveedor => new MapperConfiguration(configuracion =>
+{
+    var geometryFactory = proveedor.GetRequiredService<GeometryFactory>();
+    configuracion.AddProfile(new AutoMapperProfiles(geometryFactory));
+}).CreateMapper());
 
 // Configuracion DbContext
-builder.Services.AddDbContext<ApplicationDbContext>(opciones => opciones.UseSqlServer("name=DefaultConnection"));
+builder.Services.AddDbContext<ApplicationDbContext>(opciones => 
+    opciones.UseSqlServer("name=DefaultConnection", sqlServer => 
+    sqlServer.UseNetTopologySuite())); // Configuracion para poder utilizar NetTopologySuite con SqlServer
+
+// Configuracion de GeometryFactory para poder realizar operaciones con distancias
+builder.Services.AddSingleton<GeometryFactory>(NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326)); // Para trabajar con coordenadas en la Tierra
 
 // Configuracion de OutputCache
 builder.Services.AddOutputCache(opciones =>
