@@ -1,16 +1,17 @@
-﻿using NetTopologySuite.Geometries;
-using PeliculasAPI.Validaciones;
+﻿using PeliculasAPI.Validaciones;
 using System.ComponentModel.DataAnnotations;
 
-namespace PeliculasAPI.Entidades
+namespace PeliculasAPI.DTOs
 {
-    public class Cine : IId
+    public class CineCreacionDTO
     {
-        public int Id { get; set; }
         [Required(ErrorMessage = "El campo {0} es requerido")]
         [StringLength(75, ErrorMessage = "El campo {0} debe contener {1} caracteres o menos")]
         [PrimeraLetraMayuscula]
         public required string Nombre { get; set; }
-        public required Point Ubicacion { get; set; }
+        [Range(-90, 90)]
+        public double Latitud { get; set; }
+        [Range(-180, 180)]
+        public double Longitud { get; set; }
     }
 }
