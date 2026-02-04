@@ -1,6 +1,8 @@
-﻿namespace PeliculasAPI.DTOs
+﻿using PeliculasAPI.Entidades;
+
+namespace PeliculasAPI.DTOs
 {
-    public class ActorDTO
+    public class ActorDTO : IId
     {
         public int Id { get; set; }
         public required string Nombre { get; set; }
