@@ -43,13 +43,24 @@ namespace PeliculasAPI.Controllers
             return await Get<Actor, ActorDTO>(id);
         }
 
+        [HttpGet("{nombre}")]
+        public async Task<ActionResult<List<PeliculaActorDTO>>> Get(string nombre)
+        {
+            var actores = await context.Actores
+                .Where(a => a.Nombre.Contains(nombre))
+                .ProjectTo<PeliculaActorDTO>(mapper.ConfigurationProvider)
+                .ToListAsync();
+            return actores;
+        }
+
         [HttpPost]
         public async Task<IActionResult> Post([FromForm] ActorCreacionDTO actorCreacionDTO) // FromForm ya que se recibe un archivo a traves del IFormFile
         {
             var actor = mapper.Map<Actor>(actorCreacionDTO); // mapper.Map<destino>(source)
 
-            if (actorCreacionDTO.Foto is not null)
+            if (actorCreacionDTO.Foto is not null) // Si se envio una foto
             {
+                // Almacenar la foto y obtener la URL
                 var url = await almacenadorArchivos.Almacenar(contenedor, actorCreacionDTO.Foto);
                 actor.Foto = url;
             }
@@ -57,7 +68,8 @@ namespace PeliculasAPI.Controllers
             context.Add(actor);
             await context.SaveChangesAsync();
             await outputCacheStore.EvictByTagAsync(cacheTag, default); // Limpiar cache al crear un actor
-            return CreatedAtRoute("ObtenerActorPorId", new { id = actor.Id }, actor);
+            var actorDTO = mapper.Map<ActorDTO>(actor); // Mapear a ActorDTO para retornarlo en la respuesta
+            return CreatedAtRoute("ObtenerActorPorId", new { id = actor.Id }, actorDTO);
         }
 
         [HttpPut("{id:int}")]
