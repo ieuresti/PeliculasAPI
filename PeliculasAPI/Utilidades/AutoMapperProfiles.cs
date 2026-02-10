@@ -55,6 +55,26 @@ namespace PeliculasAPI.Utilidades
                     dto.MapFrom(p => p.Actores!.Select(a => new PeliculaActor { ActorId = a.Id, Personaje = a.Personaje }))); // Mapear lista de actores
             
             CreateMap<Pelicula, PeliculaDTO>();
+
+            CreateMap<Pelicula, PeliculaDetallesDTO>()
+                .ForMember(p => p.Generos, entidad => entidad.MapFrom(p => p.PeliculaGeneros))
+                .ForMember(p => p.Cines, entidad => entidad.MapFrom(p => p.PeliculaCines))
+                .ForMember(p => p.Actores, entidad => entidad.MapFrom(p => p.PeliculaActores.OrderBy(o => o.Orden)));
+
+            CreateMap<PeliculaGenero, GeneroDTO>()
+                .ForMember(g => g.Id, pg => pg.MapFrom(p => p.GeneroId))
+                .ForMember(g => g.Nombre, pg => pg.MapFrom(p => p.Genero.Nombre));
+
+            CreateMap<PeliculaCine, CineDTO>()
+                .ForMember(c => c.Id, pc => pc.MapFrom(p => p.CineId))
+                .ForMember(c => c.Nombre, pc => pc.MapFrom(p => p.Cine.Nombre))
+                .ForMember(c => c.Latitud, pc => pc.MapFrom(p => p.Cine.Ubicacion.Y))
+                .ForMember(c => c.Longitud, pc => pc.MapFrom(p => p.Cine.Ubicacion.X));
+
+            CreateMap<PeliculaActor, PeliculaActorDTO>()
+                .ForMember(a => a.Id, pa => pa.MapFrom(p => p.ActorId))
+                .ForMember(a => a.Nombre, pa => pa.MapFrom(p => p.Actor.Nombre))
+                .ForMember(a => a.Foto, pa => pa.MapFrom(p => p.Actor.Foto));
         }
     }
 }
