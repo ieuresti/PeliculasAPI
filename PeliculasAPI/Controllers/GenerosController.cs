@@ -25,6 +25,13 @@ namespace PeliculasAPI.Controllers
             this.outputCacheStore = outputCacheStore;
         }
 
+        [HttpGet("todos")]
+        [OutputCache(Tags = [cacheTag])]
+        public async Task<List<GeneroDTO>> Get()
+        {
+            return await Get<Genero, GeneroDTO>(ordenarPor: g => g.Nombre);
+        }
+
         [HttpGet]
         [OutputCache(Tags = [cacheTag])]
         public async Task<List<GeneroDTO>> Get([FromQuery] PaginacionDTO paginacion) // Obtener la data de paginacion de query strings

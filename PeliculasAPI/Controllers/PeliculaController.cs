@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using PeliculasAPI.DTOs;
 using PeliculasAPI.Entidades;
 using PeliculasAPI.Servicios;
+using PeliculasAPI.Utilidades;
 
 namespace PeliculasAPI.Controllers
 {
@@ -119,6 +120,45 @@ namespace PeliculasAPI.Controllers
 
             return pelicula;
         }
+
+        [HttpGet("filtrar")]
+        public async Task<ActionResult<List<PeliculaDTO>>> Filtrar([FromQuery] PeliculasFiltrarDTO peliculasFiltrarDTO) // FromQuery ya que se reciben los parámetros de filtrado a través de la query string
+        {
+            // El método AsQueryable() se utiliza para convertir la colección de películas en un IQueryable, lo que permite construir consultas dinámicas basadas en los parámetros de filtrado proporcionados por el usuario. Esto es útil para aplicar filtros condicionales y paginación de manera eficiente.
+            var peliculasQueryable = context.Peliculas.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(peliculasFiltrarDTO.Titulo))
+            {
+                // Si el usuario proporcionó un título para filtrar, se agrega una condición a la consulta para buscar películas cuyo título contenga el texto proporcionado.
+                // El método Contains se utiliza para realizar una búsqueda parcial, lo que significa que se encontrarán películas que contengan el texto en cualquier parte del título.
+                peliculasQueryable = peliculasQueryable.Where(p => p.Titulo.Contains(peliculasFiltrarDTO.Titulo));
+            }
+
+            if (peliculasFiltrarDTO.EnCines)
+            {
+                peliculasQueryable = peliculasQueryable.Where(p => p.PeliculaCines.Select(pc => pc.PeliculaId).Contains(p.Id));
+            }
+
+            if (peliculasFiltrarDTO.ProximosEstrenos)
+            {
+                var hoy = DateTime.Today;
+                peliculasQueryable = peliculasQueryable.Where(p => p.FechaLanzamiento > hoy);
+            }
+
+            if (peliculasFiltrarDTO.GeneroId != 0)
+            {
+                peliculasQueryable = peliculasQueryable.Where(p => p.PeliculaGeneros.Select(pg => pg.GeneroId).Contains(peliculasFiltrarDTO.GeneroId));
+            }
+
+            await HttpContext.InsertarParametrosPaginacionEnCabecera(peliculasQueryable);
+
+            var peliculas = await peliculasQueryable
+                .Paginar(peliculasFiltrarDTO.Paginacion)
+                .ProjectTo<PeliculaDTO>(mapper.ConfigurationProvider)
+                .ToListAsync();
+
+            return peliculas;
+        } 
 
         [HttpPost]
         public async Task<IActionResult> Post([FromForm] PeliculaCreacionDTO peliculaCreacionDTO) // FromForm ya que se recibe un archivo a traves del IFormFile
