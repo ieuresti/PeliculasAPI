@@ -1,9 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using PeliculasAPI.Entidades;
 
 namespace PeliculasAPI
 {
-    public class ApplicationDbContext : DbContext
+    public class ApplicationDbContext : IdentityDbContext // IdentityDbContext se utiliza para manejar la autenticacion y autorizacion de usuarios, roles, etc.
     {
         public ApplicationDbContext(DbContextOptions options) : base(options)
         {
@@ -11,7 +12,8 @@ namespace PeliculasAPI
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            base.OnModelCreating(modelBuilder); // Llama al metodo base para asegurar que la configuracion predeterminada se aplique
+            // OnModelCreating se utiliza para configurar el modelo de datos, como las relaciones entre entidades, claves primarias, etc.
+            base.OnModelCreating(modelBuilder); // Si esto no esta, no se aplicaran las configuraciones de IdentityDbContext
 
             modelBuilder.Entity<PeliculaGenero>()
                 .HasKey(e => new { e.GeneroId, e.PeliculaId }); // Configurar clave primaria compuesta

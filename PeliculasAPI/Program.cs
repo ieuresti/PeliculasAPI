@@ -1,10 +1,13 @@
 using AutoMapper;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using NetTopologySuite;
 using NetTopologySuite.Geometries;
 using PeliculasAPI;
 using PeliculasAPI.Servicios;
 using PeliculasAPI.Utilidades;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +25,29 @@ builder.Services.AddSingleton(proveedor => new MapperConfiguration(configuracion
     var geometryFactory = proveedor.GetRequiredService<GeometryFactory>();
     configuracion.AddProfile(new AutoMapperProfiles(geometryFactory));
 }).CreateMapper());
+
+// Configuracion de Identity
+builder.Services.AddIdentityCore<IdentityUser>()
+    .AddEntityFrameworkStores<ApplicationDbContext>() // Configuracion para utilizar Entity Framework con Identity
+    .AddDefaultTokenProviders(); // Configuracion para utilizar los token providers por defecto de Identity (para generar tokens de confirmacion de email, restablecimiento de contraseña, etc.)
+
+builder.Services.AddScoped<UserManager<IdentityUser>>(); // Nos va a permitir gestionar los usuarios (crear, eliminar, actualizar, etc.)
+builder.Services.AddScoped<SignInManager<IdentityUser>>(); // Nos va a permitir gestionar el inicio de sesión de los usuarios (iniciar sesión, cerrar sesión, etc.)
+
+// Configuracion del servicio de autenticacion JWT
+builder.Services.AddAuthentication().AddJwtBearer(opciones =>
+{
+    opciones.MapInboundClaims = false; // Esto es para evitar que no se cambien los nombres de los claims que ASP.NET Core cambia por defecto
+    opciones.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = false, // No validamos el emisor del token
+        ValidateAudience = false, // No validamos el destinatario del token
+        ValidateLifetime = true, // Validamos la expiracion del token
+        ValidateIssuerSigningKey = true, // Validamos la firma del token
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["llavejwt"]!)), // Configuracion de la clave de firma del token y el algoritmo de firma
+        ClockSkew = TimeSpan.Zero // Esto es para evitar que se permita un margen de tiempo para la expiracion del token (por defecto es de 5 minutos)
+    };
+});
 
 // Configuracion DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(opciones => 
