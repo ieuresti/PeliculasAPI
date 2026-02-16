@@ -1,5 +1,7 @@
 ﻿using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +14,7 @@ namespace PeliculasAPI.Controllers
 {
     [Route("api/peliculas")]
     [ApiController]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class PeliculaController : CustomBaseController
     {
         private readonly ApplicationDbContext context;
@@ -79,6 +82,7 @@ namespace PeliculasAPI.Controllers
 
         [HttpGet("landing")]
         [OutputCache(Tags = [cacheTag])]
+        [AllowAnonymous]
         public async Task<ActionResult<LandingPageDTO>> Get()
         {
             var top = 6;
@@ -107,6 +111,7 @@ namespace PeliculasAPI.Controllers
 
         [HttpGet("{id:int}", Name = "ObtenerPeliculaPorId")]
         [OutputCache(Tags = [cacheTag])]
+        [AllowAnonymous]
         public async Task<ActionResult<PeliculaDetallesDTO>> Get(int id)
         {
             var pelicula = await context.Peliculas
@@ -122,6 +127,7 @@ namespace PeliculasAPI.Controllers
         }
 
         [HttpGet("filtrar")]
+        [AllowAnonymous]
         public async Task<ActionResult<List<PeliculaDTO>>> Filtrar([FromQuery] PeliculasFiltrarDTO peliculasFiltrarDTO) // FromQuery ya que se reciben los parámetros de filtrado a través de la query string
         {
             // El método AsQueryable() se utiliza para convertir la colección de películas en un IQueryable, lo que permite construir consultas dinámicas basadas en los parámetros de filtrado proporcionados por el usuario. Esto es útil para aplicar filtros condicionales y paginación de manera eficiente.

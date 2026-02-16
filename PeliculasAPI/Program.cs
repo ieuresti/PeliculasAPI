@@ -49,6 +49,13 @@ builder.Services.AddAuthentication().AddJwtBearer(opciones =>
     };
 });
 
+// Configuracion politicas de autorizacion
+builder.Services.AddAuthorization(opciones =>
+{
+    // Esta política exige que el usuario autenticado tenga un claim cuyo tipo sea esAdmin. Si el claim no existe, la autorización falla (403)
+    opciones.AddPolicy("esAdmin", politica => politica.RequireClaim("esAdmin"));
+});
+
 // Configuracion DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(opciones => 
     opciones.UseSqlServer("name=DefaultConnection", sqlServer => 

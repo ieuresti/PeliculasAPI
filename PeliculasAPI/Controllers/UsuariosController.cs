@@ -1,7 +1,13 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PeliculasAPI.DTOs;
+using PeliculasAPI.Utilidades;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -15,16 +21,34 @@ namespace PeliculasAPI.Controllers
         private readonly UserManager<IdentityUser> userManager;
         private readonly SignInManager<IdentityUser> signInManager;
         private readonly IConfiguration configuration;
+        private readonly ApplicationDbContext context;
+        private readonly IMapper mapper;
 
         public UsuariosController(UserManager<IdentityUser> userManager,
-            SignInManager<IdentityUser> signInManager, IConfiguration configuration)
+            SignInManager<IdentityUser> signInManager, IConfiguration configuration, ApplicationDbContext context, IMapper mapper)
         {
             this.userManager = userManager;
             this.signInManager = signInManager;
             this.configuration = configuration;
+            this.context = context;
+            this.mapper = mapper;
+        }
+
+        [HttpGet("ListadoUsuarios")]
+        public async Task<ActionResult<List<UsuarioDTO>>> ListadoUsarios([FromQuery] PaginacionDTO paginacionDTO) // Obtener la data de paginacion de query strings
+        {
+            var queryable = context.Users.AsQueryable();
+            await HttpContext.InsertarParametrosPaginacionEnCabecera(queryable);
+            var usuarios = await queryable
+                .Paginar(paginacionDTO)
+                .ProjectTo<UsuarioDTO>(mapper.ConfigurationProvider)
+                .OrderBy(x => x.Email)
+                .ToListAsync();
+            return usuarios;
         }
 
         [HttpPost("registrar")]
+        [AllowAnonymous]
         public async Task<ActionResult<RespuestaAutenticacionDTO>> Registrar(CredencialesUsuarioDTO credencialesUsuarioDTO)
         {
             // Crear un nuevo usuario con el email y password proporcionados
@@ -49,6 +73,7 @@ namespace PeliculasAPI.Controllers
         }
 
         [HttpPost("login")]
+        [AllowAnonymous]
         public async Task<ActionResult<RespuestaAutenticacionDTO>> Login(CredencialesUsuarioDTO credencialesUsuarioDTO)
         {
             // Buscar el usuario en la base de datos por su email
@@ -73,6 +98,34 @@ namespace PeliculasAPI.Controllers
                 var errores = ConstruirLoginIncorrecto();
                 return BadRequest(errores);
             }
+        }
+
+        [HttpPost("HacerAdmin")]
+        public async Task<IActionResult> HacerAdmin(EditarClaimDTO editarClaimDTO)
+        {
+            var usuario = await userManager.FindByEmailAsync(editarClaimDTO.Email);
+
+            if (usuario is null)
+            {
+                return NotFound();
+            }
+
+            await userManager.AddClaimAsync(usuario, new Claim("esAdmin", "true"));
+            return NoContent();
+        }
+
+        [HttpPost("RemoverAdmin")]
+        public async Task<IActionResult> RemoverAdmin(EditarClaimDTO editarClaimDTO)
+        {
+            var usuario = await userManager.FindByEmailAsync(editarClaimDTO.Email);
+
+            if (usuario is null)
+            {
+                return NotFound();
+            }
+
+            await userManager.RemoveClaimAsync(usuario, new Claim("esAdmin", "true"));
+            return NoContent();
         }
 
         private async Task<RespuestaAutenticacionDTO> ConstruirToken(IdentityUser identityUser)
